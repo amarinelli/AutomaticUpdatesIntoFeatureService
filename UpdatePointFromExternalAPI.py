@@ -14,20 +14,23 @@ import urllib2
 import json
 import sys
 import time
+import os
+from sys import stdout
+from time import sleep
 
 # Credentials and feature service information
-username = "    "
-password = "     "    
-service = "issLocation" 
+username = ""
+password = ""    
+service = "iisLayer" 
 
 # Note - the URL ends with "FeatureServer". The code below handles the /0 or /n for a given layer within the service
-fsURL = "http://services1.arcgis.com/....."  # Example: fsURL = "http://services1.arcgis.com/aaa123/arcgis/rest/services/issLocation/FeatureServer"
+fsURL = "http://services.arcgis.com/EgePHk52tsFjmhbJ/arcgis/rest/services/issSchema/FeatureServer"
 
 # Service URL to get updates from
 ISSURL = "http://api.open-notify.org/iss-now.json"
 
 # How long to wait before updating again
-pauseTime = 300  # 300 seconds = 5minutes
+pauseTime = 60  # 60 seconds = 1 minute
 
 class AGOLHandler(object):    
     """
@@ -97,11 +100,12 @@ def send_AGOL_Request(URL, query_dict, returnType=False):
         return jsonOuput
     
     if not returnType:
-        if "updateResults" in jsonOuput:
+        if "addResults" in jsonOuput:
             try:            
-                for updateItem in jsonOuput['updateResults']:                    
+                for updateItem in jsonOuput['addResults']:                    
                     if updateItem['success'] is True:
-                        print("request submitted successfully")
+                        pass
+                        #print("request submitted successfully")
             except:
                 print("Error: {0}".format(jsonOuput))
                 return False
@@ -164,7 +168,10 @@ def updatePoint(con, ptURL, X, Y, ptTime):
     return
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
+
+    clear = lambda: os.system('cls')
+    clear()
 
     # Initialize the AGOLHandler for token and feature service JSON templates
     con = AGOLHandler(username, password, service)
@@ -173,10 +180,15 @@ if __name__ == "__main__":
         
         # Check the Feature Service for the required layer and they have at least 1 point
         # This call can be removed if you're certain the layer exists with a point
-        fillEmptyGeo(con, fsURL)       
+        
+        #fillEmptyGeo(con, fsURL)
+
+        records = 0
         
         # Loop indefinitely  
         while True:
+
+            print "{0}".format("ADDING FEATURES\n")
             
             # Get the current ISS location and read into memory
             req = urllib2.Request(ISSURL)
@@ -191,9 +203,23 @@ if __name__ == "__main__":
                 con.getToken(username, password)
     
             # Update IIS location
-            updatePoint(con, fsURL + "/0/updateFeatures", X, Y, ptTime)          
-           
-            time.sleep(pauseTime) 
+            updatePoint(con, fsURL + "/0/addFeatures", X, Y, ptTime)
+
+            records +=1
+            print "Total additions (session) = {0}\n".format(records)            
+
+            wait = 1
+            while wait < 60:
+                stdout.write("\rwait ||{0}{1}||".format("."*wait, " "*(59-wait)))
+                wait += 1
+                stdout.flush()
+                sleep(1)
+            stdout.flush()
+            sleep(1)    
+            clear()
+
+            #print "Waiting...."
+            #time.sleep(pauseTime)            
                 
             
     # Generic exception handling: simple message is printed to the screen so the script continues to run.
